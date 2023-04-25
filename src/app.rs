@@ -10,7 +10,7 @@ pub struct RunApp {
 impl Default for RunApp {
     fn default() -> Self {
         Self {
-            cd: Deck::new("Deck 1"),
+            cd: Deck::new(&mut "Default".to_string()),
         }
     }
 }

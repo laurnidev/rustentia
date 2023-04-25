@@ -79,4 +79,12 @@ impl Database {
         let flashcards: Result<Vec<FlashCard>> = rows.collect();
         flashcards
     }
+    pub fn get_deck_count(&self) -> Result<i32> {
+        let count: i32 = self
+            .connection
+            .query_row("SELECT COUNT(*) FROM decks", [], |row| {
+                row.get(0).map(|id: i32| id)
+            })?;
+        Ok(count)
+    }
 }
