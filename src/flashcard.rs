@@ -10,6 +10,7 @@ pub struct FlashCard {
     pub back: String,
     pub correct: bool,
     pub current_side: FlashCardSide,
+    pub idx: usize,
 }
 
 impl FlashCard {
