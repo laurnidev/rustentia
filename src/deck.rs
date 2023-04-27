@@ -26,8 +26,15 @@ impl Deck {
                 .add_flashcard("Add cards to your deck!", "Menu: Cards > Add cards", name)
                 .unwrap();
         }
+        // database.add_deck("Default 1").unwrap();
+        // database.add_flashcard("Test", "Back", "Default 1").unwrap();
+        // database.add_flashcard("Test", "Back", "Default 1").unwrap();
+        // database
+        //     .add_flashcard("Test 2", "Back 2", "Default 1")
+        //     .unwrap();
         // println!("{:?}", database.get_all_decks());
-        // println!("{:?}", database.get_flashcards(name));
+        // println!("{:?}", database.get_card_count("Default 1"));
+        // println!("{:?}", database.get_flashcards("Default 1"));
         Self {
             name: name.to_string(),
             flashcards: database.get_flashcards(&name).unwrap(),
