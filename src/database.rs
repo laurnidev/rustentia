@@ -26,6 +26,7 @@ impl Database {
              correct BOOLEAN,
              current_side INTEGER,
              deck_id INTEGER,
+             card_idx INTEGER,
              FOREIGN KEY(deck_id) REFERENCES decks(id)
          )",
             [],
@@ -33,25 +34,35 @@ impl Database {
         Ok(())
     }
 
-    pub fn add_deck(&self, name: &str) -> Result<()> {
+    pub fn add_deck(&self, name: &str) -> Result<bool> {
+        if !self.deck_is_unique(name)? {
+            return Ok(false);
+        }
         self.connection
             .execute("INSERT INTO decks (name) VALUES (?1)", &[name])?;
-        Ok(())
+        Ok(true)
     }
 
-    pub fn add_flashcard(&self, front: &str, back: &str, deck_name: &str) -> Result<()> {
+    pub fn add_flashcard(&self, front: &str, back: &str, deck_name: &str) -> Result<bool> {
+        if !self.card_is_unique(&front, &back)? {
+            return Ok(false);
+        }
         let deck_id: String = self.connection.query_row(
             "SELECT id FROM decks WHERE name = ?1",
             &[deck_name],
             |row| row.get(0).map(|id: i64| id.to_string()),
         )?;
-        println!("deck_id: {}", deck_id);
         self.connection.execute(
-            "INSERT INTO flashcards (front, back, correct, current_side, deck_id)
-            VALUES (?1, ?2, false, 0, ?3)",
-            &[front, back, &deck_id],
+            "INSERT INTO flashcards (front, back, correct, current_side, deck_id, card_idx)
+            VALUES (?1, ?2, false, 0, ?3, ?4)",
+            (
+                front,
+                back,
+                &deck_id,
+                self.get_card_count(deck_name).unwrap(),
+            ),
         )?;
-        Ok(())
+        Ok(true)
     }
     pub fn get_all_decks(&self) -> Result<Vec<String>> {
         let mut stmt = self.connection.prepare("SELECT name FROM decks")?;
@@ -64,7 +75,7 @@ impl Database {
     }
     pub fn get_flashcards(&self, deck_name: &str) -> Result<Vec<FlashCard>> {
         let mut stmt = self.connection.prepare(
-            "SELECT front, back, correct FROM flashcards
+            "SELECT front, back, correct, card_idx FROM flashcards
              INNER JOIN decks ON flashcards.deck_id = decks.id
              WHERE decks.name = ?1",
         )?;
@@ -74,6 +85,7 @@ impl Database {
                 back: row.get(1)?,
                 correct: row.get(2)?,
                 current_side: FlashCardSide::Front,
+                idx: row.get(3)?,
             })
         })?;
         let flashcards: Result<Vec<FlashCard>> = rows.collect();
@@ -86,5 +98,33 @@ impl Database {
                 row.get(0).map(|id: i32| id)
             })?;
         Ok(count)
+    }
+    pub fn get_card_count(&self, name: &str) -> Result<i32> {
+        let count: i32 = self.connection.query_row(
+            "SELECT COUNT(*) FROM flashcards
+             INNER JOIN decks ON flashcards.deck_id = decks.id
+             WHERE decks.name = ?1",
+            &[name],
+            |row| row.get(0).map(|id: i32| id),
+        )?;
+        Ok(count)
+    }
+    fn deck_is_unique(&self, name: &str) -> Result<bool> {
+        let count: i32 = self.connection.query_row(
+            "SELECT COUNT(*) FROM decks
+             WHERE name = ?1",
+            &[name],
+            |row| row.get(0).map(|id: i32| id),
+        )?;
+        Ok(count == 0)
+    }
+    fn card_is_unique(&self, front: &str, back: &str) -> Result<bool> {
+        let count: i32 = self.connection.query_row(
+            "SELECT COUNT(*) FROM flashcards
+             WHERE front = ?1 AND back = ?2",
+            (front, back),
+            |row| row.get(0).map(|id: i32| id),
+        )?;
+        Ok(count == 0)
     }
 }
