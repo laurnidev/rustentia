@@ -1,6 +1,8 @@
-use crate::flashcard::*;
 use rusqlite::{Connection, Result};
 
+use crate::flashcard::{FlashCard, FlashCardSide};
+
+#[derive(Debug)]
 pub struct Database {
     pub connection: Connection,
 }
@@ -44,7 +46,7 @@ impl Database {
     }
 
     pub fn add_flashcard(&self, front: &str, back: &str, deck_name: &str) -> Result<bool> {
-        if !self.card_is_unique(&front, &back)? {
+        if !self.card_is_unique(&front, &back, &deck_name)? {
             return Ok(false);
         }
         let deck_id: String = self.connection.query_row(
@@ -118,11 +120,12 @@ impl Database {
         )?;
         Ok(count == 0)
     }
-    fn card_is_unique(&self, front: &str, back: &str) -> Result<bool> {
+    fn card_is_unique(&self, front: &str, back: &str, deck_name: &str) -> Result<bool> {
         let count: i32 = self.connection.query_row(
             "SELECT COUNT(*) FROM flashcards
-             WHERE front = ?1 AND back = ?2",
-            (front, back),
+             INNER JOIN decks ON flashcards.deck_id = decks.id
+             WHERE front = ?1 AND back = ?2 AND decks.name = ?3",
+            (front, back, deck_name),
             |row| row.get(0).map(|id: i32| id),
         )?;
         Ok(count == 0)
