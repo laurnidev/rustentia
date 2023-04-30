@@ -32,9 +32,6 @@ impl Deck {
                 )
                 .unwrap();
         }
-        println!("{:?}", database.get_all_decks());
-        println!("{:?}", database.get_card_count("hui"));
-        println!("{:?}", database.get_flashcards("hui"));
         let default_card = FlashCard {
             front: "".to_string(),
             back: "".to_string(),
@@ -65,9 +62,6 @@ impl Deck {
             current_side: FlashCardSide::Front,
             idx: 0,
         };
-        // println!("{:?}", database.get_all_decks());
-        // println!("{:?}", database.get_card_count(&deck_name));
-        // println!("{:?}", database.get_flashcards(&deck_name));
         Self {
             name: deck_name.to_string(),
             flashcards: database.get_flashcards(&deck_name).unwrap(),
