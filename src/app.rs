@@ -1,6 +1,8 @@
-use eframe::egui;
+use eframe::egui::{self, Frame, Margin};
 use eframe::egui::{menu, FontId, RichText};
 
+use eframe::emath::Align2;
+use eframe::epaint::{Color32, Rounding, Shadow, Stroke};
 use egui_notify::Toasts;
 use std::time::Duration;
 
@@ -26,7 +28,7 @@ impl Default for RunApp {
             add_card_back: "".to_string(),
             show_add_deck: false,
             add_deck_name: "".to_string(),
-            toasts: Toasts::new().with_margin(egui::vec2(5.0, 30.0)),
+            toasts: Toasts::new().with_margin(egui::vec2(5.0, 70.0)),
             new_deck_name: "".to_string(),
         }
     }
@@ -110,11 +112,11 @@ impl eframe::App for RunApp {
                                 if ui.button("Import cards").clicked() {}
                             });
                             ui.menu_button("Decks", |ui| {
-                                if ui.button("Add deck").clicked() {
+                                if ui.button("Add decks").clicked() {
                                     self.show_add_deck = true;
                                 }
-                                if ui.button("Edit deck").clicked() {}
-                                if ui.button("Import deck").clicked() {}
+                                if ui.button("Edit decks").clicked() {}
+                                if ui.button("Import decks").clicked() {}
                             });
                             ui.menu_button("Settings", |ui| if ui.button("Open").clicked() {});
                             ui.menu_button("Help", |ui| if ui.button("Open").clicked() {});
@@ -133,6 +135,30 @@ impl eframe::App for RunApp {
                         ui.label(self.cd.name.to_string());
                         ui.add_space(200.0);
                         ui.columns(3, |columns| {
+                            columns[2].with_layout(
+                                egui::Layout::right_to_left(egui::Align::RIGHT),
+                                |ui| {
+                                    ui.add_space(20.0);
+                                    egui::Window::new("Select deck")
+                                        .frame(custom_frame())
+                                        .anchor(Align2::RIGHT_TOP, [-5.0, 5.0])
+                                        .default_open(false)
+                                        .show(ctx, |ui| {
+                                            let deck_count = self.cd.db.get_deck_count().unwrap();
+                                            if deck_count > 1 {
+                                                let mut i = 1;
+                                                while i < deck_count {
+                                                    let deck_name = // Skip the "Default" deck
+                                                        self.cd.db.get_deck_name(i + 1).unwrap();
+                                                    if ui.button(deck_name.to_string()).clicked() {
+                                                        self.cd = self.set_deck(deck_name)
+                                                    };
+                                                    i += 1;
+                                                }
+                                            }
+                                        });
+                                },
+                            );
                             columns[1].with_layout(
                                 egui::Layout::top_down_justified(egui::Align::Center),
                                 |ui| {
@@ -215,5 +241,34 @@ impl eframe::App for RunApp {
             }
         }
         self.toasts.show(ctx);
+    }
+}
+
+fn custom_frame() -> Frame {
+    Frame {
+        inner_margin: Margin {
+            left: 10.0,
+            right: 10.0,
+            top: 7.0,
+            bottom: 7.0,
+        },
+        outer_margin: Margin {
+            left: 0.0,
+            right: 0.0,
+            top: 0.0,
+            bottom: 0.0,
+        },
+        rounding: Rounding {
+            nw: 2.0,
+            ne: 2.0,
+            sw: 2.0,
+            se: 2.0,
+        },
+        shadow: Shadow::NONE,
+        fill: Color32::default(),
+        stroke: Stroke {
+            width: 0.5,
+            color: Color32::DARK_GRAY,
+        },
     }
 }
