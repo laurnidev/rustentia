@@ -61,7 +61,7 @@ impl Database {
                 front,
                 back,
                 &deck_id,
-                self.get_card_count(deck_name).unwrap(),
+                self.get_card_count(deck_name).unwrap() + 1,
             ),
         )?;
         Ok(true)
@@ -74,6 +74,13 @@ impl Database {
             decks.push(name?);
         }
         Ok(decks)
+    }
+    pub fn get_deck_name(&self, id: i32) -> Result<String> {
+        let mut stmt = self
+            .connection
+            .prepare("SELECT name FROM decks WHERE id = ?1")?;
+        let deck_name = stmt.query_row([id], |row| row.get(0))?;
+        Ok(deck_name)
     }
     pub fn get_flashcards(&self, deck_name: &str) -> Result<Vec<FlashCard>> {
         let mut stmt = self.connection.prepare(
