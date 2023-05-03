@@ -15,7 +15,7 @@ pub struct RunApp {
     pub add_card_back: String,
     pub show_add_deck: bool,
     pub add_deck_name: String,
-    pub new_deck_name: String,
+    pub show_edit_deck: bool,
     pub toasts: Toasts,
 }
 
@@ -29,217 +29,32 @@ impl Default for RunApp {
             show_add_deck: false,
             add_deck_name: "".to_string(),
             toasts: Toasts::new().with_margin(egui::vec2(5.0, 70.0)),
-            new_deck_name: "".to_string(),
+            show_edit_deck: false,
         }
-    }
-}
-
-impl RunApp {
-    fn set_deck(&mut self, deck_name: String) -> Deck {
-        Deck::other_deck(deck_name)
     }
 }
 
 impl eframe::App for RunApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         // ctx.set_visuals(egui::style::Visuals::light());
-        egui::TopBottomPanel::bottom("my_panel")
+        egui::TopBottomPanel::bottom("Buttons Panel")
             .min_height(53.0)
             .show_separator_line(false)
             .show(ctx, |ui| {
-                ui.style_mut().spacing.item_spacing = egui::vec2(8.0, 8.0);
-                ui.with_layout(
-                    egui::Layout::top_down_justified(egui::Align::Center),
-                    |ui| {
-                        if ui
-                            .add(egui::Button::new(
-                                RichText::new(self.cd.current_card().get_descriptor())
-                                    .font(FontId::proportional(15.0)),
-                            ))
-                            .clicked()
-                        {
-                            self.cd.current_card().toggle_text();
-                        };
-                    },
-                );
-                ui.columns(2, |columns| {
-                    columns[0].with_layout(
-                        egui::Layout::top_down_justified(egui::Align::Center),
-                        |ui| {
-                            if ui
-                                .add(egui::Button::new(
-                                    RichText::new("Incorrect ❌ ")
-                                        .color(egui::Color32::LIGHT_RED)
-                                        .font(FontId::proportional(15.0)),
-                                ))
-                                .clicked()
-                            {
-                                self.cd.current_card().correct = false;
-                                self.cd.next_card();
-                            }
-                        },
-                    );
-                    columns[1].with_layout(
-                        egui::Layout::top_down_justified(egui::Align::Center),
-                        |ui| {
-                            if ui
-                                .add(egui::Button::new(
-                                    RichText::new("Correct ✅ ")
-                                        .color(egui::Color32::LIGHT_GREEN)
-                                        .font(FontId::proportional(15.0)),
-                                ))
-                                .clicked()
-                            {
-                                self.cd.current_card().correct = true;
-                                self.cd.next_card();
-                            }
-                        },
-                    );
-                });
+                ui_card_buttons(ui, _frame, &mut self.cd);
             });
-        egui::TopBottomPanel::top("mypanel")
+
+        egui::TopBottomPanel::top("Menu Panel")
             .show_separator_line(true)
-            .show(ctx, |ui| {
-                ui.columns(2, |columns| {
-                    columns[0].with_layout(egui::Layout::left_to_right(egui::Align::LEFT), |ui| {
-                        menu::bar(ui, |ui| {
-                            ui.menu_button("File", |ui| if ui.button("Open").clicked() {});
-                            ui.menu_button("Cards", |ui| {
-                                if ui.button("Add cards").clicked() {
-                                    self.show_add_cards = true;
-                                }
-                                if ui.button("Edit cards").clicked() {}
-                                if ui.button("Import cards").clicked() {}
-                            });
-                            ui.menu_button("Decks", |ui| {
-                                if ui.button("Add decks").clicked() {
-                                    self.show_add_deck = true;
-                                }
-                                if ui.button("Edit decks").clicked() {}
-                                if ui.button("Import decks").clicked() {}
-                            });
-                            ui.menu_button("Settings", |ui| if ui.button("Open").clicked() {});
-                            ui.menu_button("Help", |ui| if ui.button("Open").clicked() {});
-                        });
-                    });
-                    columns[1].with_layout(egui::Layout::right_to_left(egui::Align::RIGHT), |ui| {
-                        ui.heading("Rustentia");
-                    });
-                });
-            });
+            .show(ctx, |ui| ui_menu(ui, _frame, self));
+
         egui::CentralPanel::default().show(ctx, |ui| {
-            egui::ScrollArea::vertical().show(ui, |ui| {
-                ui.with_layout(
-                    egui::Layout::top_down_justified(egui::Align::Center),
-                    |ui| {
-                        ui.label(self.cd.name.to_string());
-                        ui.add_space(200.0);
-                        ui.columns(3, |columns| {
-                            columns[2].with_layout(
-                                egui::Layout::right_to_left(egui::Align::RIGHT),
-                                |ui| {
-                                    ui.add_space(20.0);
-                                    egui::Window::new("Select deck")
-                                        .frame(custom_frame())
-                                        .anchor(Align2::RIGHT_TOP, [-5.0, 5.0])
-                                        .default_open(false)
-                                        .show(ctx, |ui| {
-                                            let deck_count = self.cd.db.get_deck_count().unwrap();
-                                            if deck_count > 1 {
-                                                let mut i = 1;
-                                                while i < deck_count {
-                                                    let deck_name = // Skip the "Default" deck
-                                                        self.cd.db.get_deck_name(i + 1).unwrap();
-                                                    if ui.button(deck_name.to_string()).clicked() {
-                                                        self.cd = self.set_deck(deck_name)
-                                                    };
-                                                    i += 1;
-                                                }
-                                            }
-                                        });
-                                },
-                            );
-                            columns[1].with_layout(
-                                egui::Layout::top_down_justified(egui::Align::Center),
-                                |ui| {
-                                    ui.add(egui::Label::new(
-                                        RichText::new(self.cd.current_card().get_text())
-                                            .font(FontId::proportional(15.0)),
-                                    ));
-                                    ui.add_space(20.0);
-                                    ui.separator();
-                                },
-                            );
-                        });
-                    },
-                );
-            });
+            ui_middle(ctx, ui, _frame, self);
         });
         // Conditional
-        if self.show_add_cards {
-            egui::Window::new("Add cards")
-                .open(&mut self.show_add_cards) // Here we toggle open/not
-                .default_pos(egui::pos2(5.0, 100.0))
-                .show(ctx, |ui| {
-                    if self.cd.name == "Default" {
-                        ui.add_space(10.0);
-                        ui.label("Please create a deck first!");
-                        ui.add_space(10.0);
-                        ui.label("Decks -> Add deck");
-                        ui.add_space(10.0);
-                    } else {
-                        ui.label("Front:");
-                        ui.text_edit_multiline(&mut self.add_card_front);
-                        ui.label("Back:");
-                        ui.text_edit_multiline(&mut self.add_card_back);
-                        if ui.button("Add card").clicked() {
-                            let adding_outcome = self
-                                .cd
-                                .db
-                                .add_flashcard(
-                                    &self.add_card_front,
-                                    &self.add_card_back,
-                                    &self.cd.name,
-                                )
-                                .unwrap();
-                            if !adding_outcome {
-                                self.toasts
-                                    .info("Card already exists!")
-                                    .set_duration(Some(Duration::from_secs(4)));
-                            } else if adding_outcome {
-                                self.cd.update_flashcards();
-                            }
-                            self.add_card_front.clear();
-                            self.add_card_back.clear();
-                        };
-                    }
-                });
-        }
-        if self.show_add_deck {
-            egui::Window::new("Add decks")
-                .open(&mut self.show_add_deck) // Here we toggle open/not
-                .default_pos(egui::pos2(5.0, 100.0))
-                .show(ctx, |ui| {
-                    ui.label("Deck name:");
-                    ui.text_edit_multiline(&mut self.add_deck_name);
-                    if ui.button("Add deck").clicked() {
-                        if !self.cd.db.add_deck(&self.add_deck_name).unwrap() {
-                            self.toasts
-                                .info("Deck already exists!")
-                                .set_duration(Some(Duration::from_secs(4)));
-                            self.add_deck_name.clear();
-                        }
-                        if self.add_deck_name != "" {
-                            self.new_deck_name = self.add_deck_name.to_string();
-                        }
-                    };
-                });
-            if self.new_deck_name != "" {
-                self.cd = self.set_deck(self.new_deck_name.to_string());
-                self.add_deck_name.clear();
-                self.new_deck_name.clear();
-            }
-        }
+        ui_add_cards(ctx, _frame, self);
+        ui_add_deck(ctx, _frame, self);
+        ui_edit_deck(ctx, _frame, self);
         self.toasts.show(ctx);
     }
 }
@@ -247,10 +62,10 @@ impl eframe::App for RunApp {
 fn custom_frame() -> Frame {
     Frame {
         inner_margin: Margin {
-            left: 10.0,
-            right: 10.0,
-            top: 7.0,
-            bottom: 7.0,
+            left: 5.0,
+            right: 5.0,
+            top: 5.0,
+            bottom: 5.0,
         },
         outer_margin: Margin {
             left: 0.0,
@@ -271,4 +86,220 @@ fn custom_frame() -> Frame {
             color: Color32::DARK_GRAY,
         },
     }
+}
+
+fn ui_middle(
+    ctx: &egui::Context,
+    ui: &mut egui::Ui,
+    _frame: &mut eframe::Frame,
+    run_app: &mut RunApp,
+) {
+    egui::ScrollArea::vertical().show(ui, |ui| {
+        ui.with_layout(
+            egui::Layout::top_down_justified(egui::Align::Center),
+            |ui| {
+                ui.label(run_app.cd.name.to_string());
+                ui.add_space(200.0);
+                ui.columns(3, |columns| {
+                    columns[2].with_layout(egui::Layout::right_to_left(egui::Align::RIGHT), |ui| {
+                        ui.add_space(20.0);
+                        egui::Window::new("Select deck")
+                            .resizable(false)
+                            .frame(custom_frame())
+                            .anchor(Align2::RIGHT_TOP, [-5.0, 5.0])
+                            .default_open(false)
+                            .show(ctx, |ui| {
+                                let deck_names = run_app.cd.db.get_deck_names().unwrap();
+                                for deck_name in deck_names {
+                                    if ui.button(deck_name.to_string()).clicked() {
+                                        run_app.cd.other_deck(deck_name.to_string());
+                                        break;
+                                    }
+                                }
+                            });
+                    });
+                    columns[1].with_layout(
+                        egui::Layout::top_down_justified(egui::Align::Center),
+                        |ui| {
+                            ui.add(egui::Label::new(
+                                RichText::new(run_app.cd.current_card().get_text())
+                                    .font(FontId::proportional(15.0)),
+                            ));
+                            ui.add_space(20.0);
+                            ui.separator();
+                        },
+                    );
+                });
+            },
+        );
+    });
+}
+
+fn ui_menu(ui: &mut egui::Ui, _frame: &mut eframe::Frame, run_app: &mut RunApp) {
+    ui.columns(2, |columns| {
+        columns[0].with_layout(egui::Layout::left_to_right(egui::Align::LEFT), |ui| {
+            menu::bar(ui, |ui| {
+                ui.menu_button("File", |ui| if ui.button("Open").clicked() {});
+                ui.menu_button("Cards", |ui| {
+                    if ui.button("Add cards").clicked() {
+                        run_app.show_add_cards = true;
+                    }
+                    if ui.button("Edit cards").clicked() {}
+                    if ui.button("Import cards").clicked() {}
+                });
+                ui.menu_button("Decks", |ui| {
+                    if ui.button("Add decks").clicked() {
+                        run_app.show_add_deck = true;
+                    }
+                    if ui.button("Edit decks").clicked() {
+                        run_app.show_edit_deck = true;
+                    }
+                    if ui.button("Import decks").clicked() {}
+                });
+                ui.menu_button("Settings", |ui| if ui.button("Open").clicked() {});
+                ui.menu_button("Help", |ui| if ui.button("Open").clicked() {});
+            });
+        });
+        columns[1].with_layout(egui::Layout::right_to_left(egui::Align::RIGHT), |ui| {
+            ui.heading("Rustentia");
+        });
+    });
+}
+
+fn ui_card_buttons(ui: &mut egui::Ui, _frame: &mut eframe::Frame, cd: &mut Deck) {
+    ui.style_mut().spacing.item_spacing = egui::vec2(8.0, 8.0);
+    ui.with_layout(
+        egui::Layout::top_down_justified(egui::Align::Center),
+        |ui| {
+            if ui
+                .add(egui::Button::new(
+                    RichText::new(cd.current_card().get_descriptor())
+                        .font(FontId::proportional(15.0)),
+                ))
+                .clicked()
+            {
+                cd.current_card().toggle_text();
+            };
+        },
+    );
+    ui.columns(2, |columns| {
+        columns[0].with_layout(
+            egui::Layout::top_down_justified(egui::Align::Center),
+            |ui| {
+                if ui
+                    .add(egui::Button::new(
+                        RichText::new("Incorrect ❌ ")
+                            .color(egui::Color32::LIGHT_RED)
+                            .font(FontId::proportional(15.0)),
+                    ))
+                    .clicked()
+                {
+                    cd.current_card().correct = false;
+                    cd.next_card();
+                }
+            },
+        );
+        columns[1].with_layout(
+            egui::Layout::top_down_justified(egui::Align::Center),
+            |ui| {
+                if ui
+                    .add(egui::Button::new(
+                        RichText::new("Correct ✅ ")
+                            .color(egui::Color32::LIGHT_GREEN)
+                            .font(FontId::proportional(15.0)),
+                    ))
+                    .clicked()
+                {
+                    cd.current_card().correct = true;
+                    cd.next_card();
+                }
+            },
+        );
+    });
+}
+
+fn ui_edit_deck(ctx: &egui::Context, _frame: &mut eframe::Frame, run_app: &mut RunApp) {
+    egui::Window::new("Edit decks")
+        .open(&mut run_app.show_edit_deck)
+        .default_pos(egui::pos2(5.0, 100.0))
+        .show(ctx, |ui| {
+            ui.label("Delete deck:");
+            let deck_names = run_app.cd.db.get_deck_names().unwrap();
+            for deck_name in deck_names {
+                if ui.button(deck_name.to_string()).clicked() {
+                    if deck_name == run_app.cd.name {
+                        run_app
+                            .cd
+                            .other_deck(run_app.cd.db.previous_deck(&run_app.cd.name).unwrap());
+                    }
+                    run_app.cd.db.remove_deck(&deck_name).unwrap();
+                    break;
+                }
+            }
+        });
+}
+
+fn ui_add_cards(ctx: &egui::Context, _frame: &mut eframe::Frame, run_app: &mut RunApp) {
+    egui::Window::new("Add cards")
+        .open(&mut run_app.show_add_cards)
+        .default_pos(egui::pos2(5.0, 100.0))
+        .show(ctx, |ui| {
+            if run_app.cd.name == "Default" {
+                ui.add_space(10.0);
+                ui.label("Please create a deck first!");
+                ui.add_space(10.0);
+                ui.label("Decks -> Add deck");
+                ui.add_space(10.0);
+            } else {
+                ui.label("Front:");
+                ui.text_edit_multiline(&mut run_app.add_card_front);
+                ui.label("Back:");
+                ui.text_edit_multiline(&mut run_app.add_card_back);
+                if ui.button("Add card").clicked() {
+                    let adding_outcome = run_app
+                        .cd
+                        .db
+                        .add_flashcard(
+                            &run_app.add_card_front,
+                            &run_app.add_card_back,
+                            &run_app.cd.name,
+                        )
+                        .unwrap();
+                    if !adding_outcome {
+                        run_app
+                            .toasts
+                            .info("Card already exists!")
+                            .set_duration(Some(Duration::from_secs(4)));
+                    } else if adding_outcome {
+                        run_app.cd.update_flashcards();
+                    }
+                    run_app.add_card_front.clear();
+                    run_app.add_card_back.clear();
+                };
+            }
+        });
+}
+
+fn ui_add_deck(ctx: &egui::Context, _frame: &mut eframe::Frame, run_app: &mut RunApp) {
+    egui::Window::new("Add decks")
+        .open(&mut run_app.show_add_deck)
+        .default_pos(egui::pos2(5.0, 100.0))
+        .show(ctx, |ui| {
+            ui.label("Deck name:");
+            ui.text_edit_multiline(&mut run_app.add_deck_name);
+            if ui.button("Add deck").clicked() {
+                if !run_app.cd.db.add_deck(&run_app.add_deck_name).unwrap() {
+                    run_app
+                        .toasts
+                        .info("Deck already exists!")
+                        .set_duration(Some(Duration::from_secs(4)));
+                    run_app.add_deck_name.clear();
+                } else {
+                    if run_app.add_deck_name != "" {
+                        run_app.cd.other_deck(run_app.add_deck_name.to_string());
+                        run_app.add_deck_name.clear();
+                    }
+                }
+            };
+        });
 }
