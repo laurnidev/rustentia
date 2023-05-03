@@ -47,29 +47,13 @@ impl Deck {
             default_card,
         }
     }
-    pub fn other_deck(deck_name: String) -> Self {
-        let database = match Database::new() {
-            Ok(db) => db,
-            Err(e) => {
-                eprintln!("Error fetching deck: {}", e);
-                std::process::exit(1);
-            }
-        };
-        let default_card = FlashCard {
-            front: "".to_string(),
-            back: "".to_string(),
-            correct: false,
-            current_side: FlashCardSide::Front,
-            idx: 0,
-        };
-        Self {
-            name: deck_name.to_string(),
-            flashcards: database.get_flashcards(&deck_name).unwrap(),
-            db: database,
-            idx: 0,
-            default_card,
-        }
+
+    pub fn other_deck(&mut self, deck_name: String) {
+        self.flashcards = self.db.get_flashcards(&deck_name).unwrap();
+        self.name = deck_name;
+        self.idx = 0;
     }
+
     pub fn current_card(&mut self) -> &mut FlashCard {
         if self.flashcards.len() == 0 {
             &mut self.default_card
@@ -77,11 +61,13 @@ impl Deck {
             &mut self.flashcards[self.idx]
         }
     }
+
     pub fn next_card(&mut self) {
         if self.idx < self.flashcards.len() - 1 {
             self.idx += 1;
         }
     }
+
     pub fn update_flashcards(&mut self) {
         self.flashcards = self.db.get_flashcards(&self.name).unwrap();
     }
