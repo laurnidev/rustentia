@@ -80,30 +80,6 @@ impl Database {
         Ok(true)
     }
 
-    fn next_deck(&self, deck_name: &str) -> Result<String> {
-        let mut stmt = self.connection.prepare(
-            "SELECT name FROM decks
-             WHERE id = (SELECT id FROM decks WHERE name > ?1 ORDER BY name ASC LIMIT 1)",
-        )?;
-        let deck = stmt.query_row([deck_name], |row| row.get(0))?;
-        Ok(deck)
-    }
-
-    pub fn previous_deck(&self, deck_name: &str) -> Result<String> {
-        let mut deck = "Default".to_string();
-        if self.get_deck_count().unwrap() > 2 {
-            let mut stmt = self.connection.prepare(
-                "SELECT name FROM decks
-                 WHERE id = (SELECT id FROM decks WHERE name < ?1 ORDER BY name DESC LIMIT 1)",
-            )?;
-            deck = stmt.query_row([deck_name], |row| row.get(0))?;
-            if deck == "Default" {
-                deck = self.next_deck(deck_name).unwrap();
-            }
-        }
-        Ok(deck)
-    }
-
     pub fn get_deck_names(&self) -> Result<Vec<String>> {
         let mut stmt = self
             .connection
