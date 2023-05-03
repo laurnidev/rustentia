@@ -12,6 +12,7 @@ impl Database {
         let connection = Connection::open("flashcards.db")?;
         Ok(Self { connection })
     }
+
     pub fn create_tables(&self) -> Result<()> {
         self.connection.execute(
             "CREATE TABLE IF NOT EXISTS decks (
@@ -29,10 +30,22 @@ impl Database {
              current_side INTEGER,
              deck_id INTEGER,
              card_idx INTEGER,
-             FOREIGN KEY(deck_id) REFERENCES decks(id)
+             FOREIGN KEY(deck_id) REFERENCES decks(id) ON DELETE CASCADE
          )",
             [],
         )?;
+        Ok(())
+    }
+
+    pub fn remove_deck(&mut self, deck_name: &str) -> Result<()> {
+        let deck_id: i64 = self.connection.query_row(
+            "SELECT id FROM decks WHERE name = ?1",
+            &[deck_name],
+            |row| row.get(0),
+        )?;
+        let tx = self.connection.transaction()?;
+        tx.execute("DELETE FROM decks WHERE id = ?1", [deck_id])?;
+        tx.commit()?;
         Ok(())
     }
 
@@ -66,8 +79,35 @@ impl Database {
         )?;
         Ok(true)
     }
-    pub fn get_all_decks(&self) -> Result<Vec<String>> {
-        let mut stmt = self.connection.prepare("SELECT name FROM decks")?;
+
+    fn next_deck(&self, deck_name: &str) -> Result<String> {
+        let mut stmt = self.connection.prepare(
+            "SELECT name FROM decks
+             WHERE id = (SELECT id FROM decks WHERE name > ?1 ORDER BY name ASC LIMIT 1)",
+        )?;
+        let deck = stmt.query_row([deck_name], |row| row.get(0))?;
+        Ok(deck)
+    }
+
+    pub fn previous_deck(&self, deck_name: &str) -> Result<String> {
+        let mut deck = "Default".to_string();
+        if self.get_deck_count().unwrap() > 2 {
+            let mut stmt = self.connection.prepare(
+                "SELECT name FROM decks
+                 WHERE id = (SELECT id FROM decks WHERE name < ?1 ORDER BY name DESC LIMIT 1)",
+            )?;
+            deck = stmt.query_row([deck_name], |row| row.get(0))?;
+            if deck == "Default" {
+                deck = self.next_deck(deck_name).unwrap();
+            }
+        }
+        Ok(deck)
+    }
+
+    pub fn get_deck_names(&self) -> Result<Vec<String>> {
+        let mut stmt = self
+            .connection
+            .prepare("SELECT name FROM decks WHERE name != 'Default'")?;
         let rows = stmt.query_map([], |row| Ok(row.get::<usize, String>(0)?))?;
         let mut decks = Vec::new();
         for name in rows {
@@ -75,13 +115,7 @@ impl Database {
         }
         Ok(decks)
     }
-    pub fn get_deck_name(&self, id: i32) -> Result<String> {
-        let mut stmt = self
-            .connection
-            .prepare("SELECT name FROM decks WHERE id = ?1")?;
-        let deck_name = stmt.query_row([id], |row| row.get(0))?;
-        Ok(deck_name)
-    }
+
     pub fn get_flashcards(&self, deck_name: &str) -> Result<Vec<FlashCard>> {
         let mut stmt = self.connection.prepare(
             "SELECT front, back, correct, card_idx FROM flashcards
@@ -100,6 +134,7 @@ impl Database {
         let flashcards: Result<Vec<FlashCard>> = rows.collect();
         flashcards
     }
+
     pub fn get_deck_count(&self) -> Result<i32> {
         let count: i32 = self
             .connection
@@ -108,6 +143,7 @@ impl Database {
             })?;
         Ok(count)
     }
+
     pub fn get_card_count(&self, name: &str) -> Result<i32> {
         let count: i32 = self.connection.query_row(
             "SELECT COUNT(*) FROM flashcards
@@ -118,6 +154,7 @@ impl Database {
         )?;
         Ok(count)
     }
+
     fn deck_is_unique(&self, name: &str) -> Result<bool> {
         let count: i32 = self.connection.query_row(
             "SELECT COUNT(*) FROM decks
@@ -127,6 +164,7 @@ impl Database {
         )?;
         Ok(count == 0)
     }
+
     fn card_is_unique(&self, front: &str, back: &str, deck_name: &str) -> Result<bool> {
         let count: i32 = self.connection.query_row(
             "SELECT COUNT(*) FROM flashcards
