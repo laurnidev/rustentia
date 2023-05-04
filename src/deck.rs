@@ -8,6 +8,9 @@ pub struct Deck {
     pub db: Database,
     pub idx: usize,
     pub default_card: FlashCard,
+    pub correct_count: usize,
+    pub incorrect_count: usize,
+    pub unanswered_count: usize,
 }
 
 impl Deck {
@@ -42,9 +45,12 @@ impl Deck {
         Self {
             name: name.to_string(),
             flashcards: database.get_flashcards(&name).unwrap(),
+            unanswered_count: database.get_flashcards(&name).unwrap().len(),
             db: database,
             idx: 0,
             default_card,
+            correct_count: 0,
+            incorrect_count: 0,
         }
     }
 
@@ -52,6 +58,9 @@ impl Deck {
         self.flashcards = self.db.get_flashcards(&deck_name).unwrap();
         self.name = deck_name;
         self.idx = 0;
+        self.correct_count = 0;
+        self.incorrect_count = 0;
+        self.unanswered_count = self.flashcards.len();
     }
 
     pub fn current_card(&mut self) -> &mut FlashCard {
@@ -83,6 +92,9 @@ impl Deck {
         for card in &mut self.flashcards {
             card.correct = false;
         }
+        self.correct_count = 0;
+        self.incorrect_count = 0;
+        self.unanswered_count = fc_len;
         self.idx = 0;
     }
 

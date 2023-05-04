@@ -107,7 +107,7 @@ fn ui_middle(
         ui.with_layout(
             egui::Layout::top_down_justified(egui::Align::Center),
             |ui| {
-                ui.label(run_app.cd.name.to_string());
+                ui.label(format!("{}", run_app.cd.name.to_string()));
                 ui.add_space(200.0);
                 ui.columns(3, |columns| {
                     columns[2].with_layout(egui::Layout::right_to_left(egui::Align::RIGHT), |ui| {
@@ -221,6 +221,18 @@ fn ui_menu(ui: &mut egui::Ui, _frame: &mut eframe::Frame, run_app: &mut RunApp) 
 }
 
 fn ui_card_buttons(ui: &mut egui::Ui, _frame: &mut eframe::Frame, cd: &mut Deck) {
+    ui.add(egui::Label::new(
+        RichText::new(format!("Correct: {}", cd.correct_count)).font(FontId::proportional(15.0)),
+    ));
+    ui.add(egui::Label::new(
+        RichText::new(format!("Incorrect: {}", cd.incorrect_count))
+            .font(FontId::proportional(15.0)),
+    ));
+    ui.add(egui::Label::new(
+        RichText::new(format!("Unanswered: {}", cd.unanswered_count))
+            .font(FontId::proportional(15.0)),
+    ));
+    ui.add_space(8.0);
     ui.style_mut().spacing.item_spacing = egui::vec2(8.0, 8.0);
     ui.with_layout(
         egui::Layout::top_down_justified(egui::Align::Center),
@@ -249,6 +261,15 @@ fn ui_card_buttons(ui: &mut egui::Ui, _frame: &mut eframe::Frame, cd: &mut Deck)
                     .clicked()
                 {
                     cd.current_card().correct = false;
+                    let fc_len = cd.flashcards.len();
+                    if cd.incorrect_count != fc_len
+                        && fc_len - cd.correct_count > cd.incorrect_count
+                    {
+                        cd.incorrect_count += 1;
+                    }
+                    if cd.unanswered_count != 0 {
+                        cd.unanswered_count -= 1;
+                    }
                     cd.next_card();
                 }
             },
@@ -265,6 +286,13 @@ fn ui_card_buttons(ui: &mut egui::Ui, _frame: &mut eframe::Frame, cd: &mut Deck)
                     .clicked()
                 {
                     cd.current_card().correct = true;
+                    cd.correct_count += 1;
+                    if cd.incorrect_count != 0 {
+                        cd.incorrect_count -= 1;
+                    }
+                    if cd.unanswered_count != 0 {
+                        cd.unanswered_count -= 1;
+                    }
                     cd.next_card();
                 }
             },
@@ -284,7 +312,7 @@ fn ui_edit_deck(ctx: &egui::Context, _frame: &mut eframe::Frame, run_app: &mut R
             let mut deleted_deck = String::new();
             let mut new_active_deck = String::new();
             egui::Grid::new("some_unique_id")
-                .min_col_width(200.0)
+                .min_col_width(250.0)
                 .min_row_height(0.5)
                 .show(ui, |ui| {
                     for (i, deck_name) in deck_names.iter().enumerate() {
