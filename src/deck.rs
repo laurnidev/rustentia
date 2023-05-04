@@ -63,9 +63,27 @@ impl Deck {
     }
 
     pub fn next_card(&mut self) {
-        if self.idx < self.flashcards.len() - 1 {
+        let fc_len = self.flashcards.len();
+        if self.idx < fc_len {
             self.idx += 1;
+            for idx in self.idx..fc_len {
+                if !self.flashcards[idx].correct {
+                    self.idx = idx;
+                    return;
+                }
+            }
         }
+        self.idx = 0;
+        for idx in 0..fc_len {
+            if !self.flashcards[idx].correct {
+                self.idx = idx;
+                return;
+            }
+        }
+        for card in &mut self.flashcards {
+            card.correct = false;
+        }
+        self.idx = 0;
     }
 
     pub fn update_flashcards(&mut self) {
