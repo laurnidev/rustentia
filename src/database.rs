@@ -80,6 +80,17 @@ impl Database {
         Ok(true)
     }
 
+    pub fn rename_deck(&self, deck_name: &str, new_deck_name: &str) -> Result<bool> {
+        if !self.deck_is_unique(new_deck_name).unwrap() {
+            return Ok(false);
+        }
+        self.connection.execute(
+            "UPDATE decks SET name = ?1 WHERE name = ?2",
+            &[new_deck_name, deck_name],
+        )?;
+        Ok(true)
+    }
+
     pub fn get_deck_names(&self) -> Result<Vec<String>> {
         let mut stmt = self
             .connection
