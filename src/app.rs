@@ -58,6 +58,9 @@ impl eframe::App for RunApp {
             ui_middle(ctx, ui, _frame, self);
         });
         // Conditional
+        if !self.show_edit_deck {
+            self.show_rename_deck = false;
+        }
         ui_add_cards(ctx, _frame, self);
         ui_add_deck(ctx, _frame, self);
         ui_edit_deck(ctx, _frame, self);
@@ -281,6 +284,7 @@ fn ui_edit_deck(ctx: &egui::Context, _frame: &mut eframe::Frame, run_app: &mut R
             let mut deleted_deck = String::new();
             let mut new_active_deck = String::new();
             egui::Grid::new("some_unique_id")
+                .min_col_width(200.0)
                 .min_row_height(0.5)
                 .show(ui, |ui| {
                     for (i, deck_name) in deck_names.iter().enumerate() {
@@ -323,6 +327,34 @@ fn ui_edit_deck(ctx: &egui::Context, _frame: &mut eframe::Frame, run_app: &mut R
                             ));
                         });
                         ui.end_row();
+                        if run_app.show_rename_deck && deck_name.to_string() == run_app.renamed_deck
+                        {
+                            ui.horizontal(|ui| {
+                                ui.add(
+                                    egui::TextEdit::singleline(&mut run_app.new_deck_name)
+                                        .desired_width(150.0),
+                                );
+                                if ui.button("Ok").clicked() {
+                                    if !run_app
+                                        .cd
+                                        .db
+                                        .rename_deck(&run_app.renamed_deck, &run_app.new_deck_name)
+                                        .unwrap()
+                                    {
+                                        run_app
+                                            .toasts
+                                            .info("This deck already exists!")
+                                            .set_duration(Some(Duration::from_secs(4)));
+                                    } else {
+                                        run_app.show_rename_deck = false;
+                                    }
+                                }
+                                if ui.button("Cancel").clicked() {
+                                    run_app.show_rename_deck = false;
+                                }
+                            });
+                        }
+                        ui.end_row();
                         if i != last_iter - 1 {
                             ui.add(egui::Separator::default().spacing(0.5));
                             ui.end_row();
@@ -336,41 +368,6 @@ fn ui_edit_deck(ctx: &egui::Context, _frame: &mut eframe::Frame, run_app: &mut R
                 run_app.cd.db.remove_deck(&deleted_deck).unwrap();
             }
         });
-    if run_app.show_rename_deck {
-        let rect = egui::Context::screen_rect(ctx);
-        egui::Window::new("rename_deck")
-            .frame(custom_frame())
-            .fixed_size(egui::vec2(200.0, 20.0))
-            .fixed_pos(egui::pos2(
-                (rect.max.x - 200.0) / 2.0,
-                (rect.max.y - 80.0) / 2.0,
-            ))
-            .resizable(false)
-            .title_bar(false)
-            .show(ctx, |ui| {
-                ui.add(egui::TextEdit::singleline(&mut run_app.new_deck_name));
-                ui.horizontal(|ui| {
-                    if ui.button("Rename").clicked() {
-                        if !run_app
-                            .cd
-                            .db
-                            .rename_deck(&run_app.renamed_deck, &run_app.new_deck_name)
-                            .unwrap()
-                        {
-                            run_app
-                                .toasts
-                                .info("This deck already exists!")
-                                .set_duration(Some(Duration::from_secs(4)));
-                        } else {
-                            run_app.show_rename_deck = false;
-                        }
-                    }
-                    if ui.button("Cancel").clicked() {
-                        run_app.show_rename_deck = false;
-                    }
-                });
-            });
-    }
 }
 
 fn ui_add_cards(ctx: &egui::Context, _frame: &mut eframe::Frame, run_app: &mut RunApp) {
@@ -404,7 +401,7 @@ fn ui_add_cards(ctx: &egui::Context, _frame: &mut eframe::Frame, run_app: &mut R
                     if !adding_outcome {
                         run_app
                             .toasts
-                            .info("Card already exists!")
+                            .info("Card already exists in deck!")
                             .set_duration(Some(Duration::from_secs(4)));
                     } else if adding_outcome {
                         run_app.cd.update_flashcards();
