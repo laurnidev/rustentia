@@ -18,6 +18,8 @@ pub struct RunApp {
     pub show_edit_deck: bool,
     pub toasts: Toasts,
     pub new_deck_name: String,
+    pub show_rename_deck: bool,
+    pub renamed_deck: String,
 }
 
 impl Default for RunApp {
@@ -32,6 +34,8 @@ impl Default for RunApp {
             toasts: Toasts::new().with_margin(egui::vec2(5.0, 70.0)),
             show_edit_deck: false,
             new_deck_name: "".to_string(),
+            show_rename_deck: false,
+            renamed_deck: "".to_string(),
         }
     }
 }
@@ -297,17 +301,22 @@ fn ui_edit_deck(ctx: &egui::Context, _frame: &mut eframe::Frame, run_app: &mut R
                                 deleted_deck = deck_name.to_string();
                                 if i >= 1 {
                                     new_active_deck = deck_names.get(i - 1).unwrap().to_string();
-                                } else if last_iter == 1 {
-                                    new_active_deck = "Default".to_string();
-                                } else if i == 0 {
-                                    new_active_deck = deck_names.get(i + 1).unwrap().to_string();
+                                } else {
+                                    new_active_deck = match last_iter {
+                                        1 => "Default".to_string(),
+                                        _ => deck_names.get(i + 1).unwrap().to_string(),
+                                    };
                                 }
                             }
                             if ui
                                 .add(egui::Button::new("✏").small())
                                 .on_hover_text("Rename")
                                 .clicked()
-                            {}
+                            {
+                                run_app.show_rename_deck = true;
+                                run_app.renamed_deck = deck_name.to_string();
+                                run_app.new_deck_name = deck_name.to_string();
+                            }
                             ui.add_space(5.0);
                             ui.add(egui::Label::new(
                                 egui::RichText::new(deck_name.to_string()).strong(),
@@ -327,6 +336,41 @@ fn ui_edit_deck(ctx: &egui::Context, _frame: &mut eframe::Frame, run_app: &mut R
                 run_app.cd.db.remove_deck(&deleted_deck).unwrap();
             }
         });
+    if run_app.show_rename_deck {
+        let rect = egui::Context::screen_rect(ctx);
+        egui::Window::new("rename_deck")
+            .frame(custom_frame())
+            .fixed_size(egui::vec2(200.0, 20.0))
+            .fixed_pos(egui::pos2(
+                (rect.max.x - 200.0) / 2.0,
+                (rect.max.y - 80.0) / 2.0,
+            ))
+            .resizable(false)
+            .title_bar(false)
+            .show(ctx, |ui| {
+                ui.add(egui::TextEdit::singleline(&mut run_app.new_deck_name));
+                ui.horizontal(|ui| {
+                    if ui.button("Rename").clicked() {
+                        if !run_app
+                            .cd
+                            .db
+                            .rename_deck(&run_app.renamed_deck, &run_app.new_deck_name)
+                            .unwrap()
+                        {
+                            run_app
+                                .toasts
+                                .info("This deck already exists!")
+                                .set_duration(Some(Duration::from_secs(4)));
+                        } else {
+                            run_app.show_rename_deck = false;
+                        }
+                    }
+                    if ui.button("Cancel").clicked() {
+                        run_app.show_rename_deck = false;
+                    }
+                });
+            });
+    }
 }
 
 fn ui_add_cards(ctx: &egui::Context, _frame: &mut eframe::Frame, run_app: &mut RunApp) {
