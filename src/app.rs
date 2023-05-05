@@ -20,6 +20,11 @@ pub struct RunApp {
     pub new_deck_name: String,
     pub show_rename_deck: bool,
     pub renamed_deck: String,
+    pub show_edit_cards: bool,
+    pub show_edit_card: bool,
+    pub edit_idx: i32,
+    pub new_front: String,
+    pub new_back: String,
 }
 
 impl Default for RunApp {
@@ -36,6 +41,11 @@ impl Default for RunApp {
             new_deck_name: "".to_string(),
             show_rename_deck: false,
             renamed_deck: "".to_string(),
+            show_edit_cards: false,
+            show_edit_card: false,
+            edit_idx: 0,
+            new_front: "".to_string(),
+            new_back: "".to_string(),
         }
     }
 }
@@ -61,9 +71,14 @@ impl eframe::App for RunApp {
         if !self.show_edit_deck {
             self.show_rename_deck = false;
         }
+        if !self.show_edit_cards {
+            self.show_edit_card = false;
+            self.edit_idx = 0;
+        }
         ui_add_cards(ctx, _frame, self);
         ui_add_deck(ctx, _frame, self);
         ui_edit_deck(ctx, _frame, self);
+        ui_edit_cards(ctx, _frame, self);
         self.toasts.show(ctx);
     }
 }
@@ -189,6 +204,97 @@ fn ui_middle(
     });
 }
 
+fn ui_edit_cards(ctx: &egui::Context, _frame: &mut eframe::Frame, run_app: &mut RunApp) {
+    egui::Window::new("Edit cards")
+        .frame(custom_frame())
+        .open(&mut run_app.show_edit_cards)
+        .default_pos(egui::pos2(5.0, 100.0))
+        .resizable(false)
+        .show(ctx, |ui| {
+            egui::ScrollArea::vertical()
+                .max_height(300.0)
+                .show(ui, |ui| {
+                    egui::Grid::new("edit_cards_grid")
+                        .min_row_height(0.5)
+                        .max_col_width(200.0)
+                        .show(ui, |ui| {
+                            ui.add(egui::Label::new(
+                                RichText::new("Front").font(FontId::proportional(15.0)),
+                            ));
+                            ui.add(egui::Label::new(
+                                RichText::new("Back").font(FontId::proportional(15.0)),
+                            ));
+                            ui.end_row();
+                            ui.end_row();
+                            let mut i = 0;
+                            let mut adding_outcome = false;
+                            for card in &run_app.cd.flashcards {
+                                i += 1;
+                                ui.label(&card.front);
+                                ui.label(&card.back);
+                                if i != run_app.edit_idx {
+                                    if ui
+                                        .add(egui::Button::new("✏").small())
+                                        .on_hover_text("Edit")
+                                        .clicked()
+                                    {
+                                        run_app.show_edit_card = true;
+                                        run_app.edit_idx = i;
+                                        run_app.new_front = card.front.to_string();
+                                        run_app.new_back = card.back.to_string();
+                                    }
+                                } else {
+                                    if ui
+                                        .add(egui::Button::new("❌").small())
+                                        .on_hover_text("Cancel")
+                                        .clicked()
+                                    {
+                                        run_app.show_edit_card = false;
+                                        run_app.edit_idx = 0;
+                                    }
+                                }
+                                ui.end_row();
+                                if run_app.show_edit_card && i == run_app.edit_idx {
+                                    ui.text_edit_multiline(&mut run_app.new_front);
+                                    ui.text_edit_multiline(&mut run_app.new_back);
+                                    if ui.small_button("Ok").clicked() {
+                                        if !run_app
+                                            .cd
+                                            .db
+                                            .edit_flashcard(
+                                                run_app.edit_idx,
+                                                &run_app.cd.name,
+                                                &run_app.new_front,
+                                                &run_app.new_back,
+                                            )
+                                            .unwrap()
+                                        {
+                                            run_app
+                                                .toasts
+                                                .info("Card already exists in deck!")
+                                                .set_duration(Some(Duration::from_secs(4)));
+                                        } else {
+                                            adding_outcome = true;
+                                        }
+                                    }
+                                    ui.end_row();
+                                }
+                                if i != run_app.cd.flashcards.len() as i32 {
+                                    ui.add(egui::Separator::default().spacing(0.5));
+                                    ui.add(egui::Separator::default().spacing(0.5));
+                                    ui.end_row();
+                                }
+                            }
+                            if adding_outcome {
+                                run_app.cd.update_flashcards();
+                                run_app.edit_idx = 0;
+                                run_app.show_edit_card = false;
+                            }
+                        });
+                });
+        });
+}
+
 fn ui_menu(ui: &mut egui::Ui, _frame: &mut eframe::Frame, run_app: &mut RunApp) {
     ui.columns(2, |columns| {
         columns[0].with_layout(egui::Layout::left_to_right(egui::Align::LEFT), |ui| {
@@ -198,7 +304,9 @@ fn ui_menu(ui: &mut egui::Ui, _frame: &mut eframe::Frame, run_app: &mut RunApp) 
                     if ui.button("Add cards").clicked() {
                         run_app.show_add_cards = true;
                     }
-                    if ui.button("Edit cards").clicked() {}
+                    if ui.button("Edit cards").clicked() {
+                        run_app.show_edit_cards = true;
+                    }
                     if ui.button("Import cards").clicked() {}
                 });
                 ui.menu_button("Decks", |ui| {
@@ -221,6 +329,10 @@ fn ui_menu(ui: &mut egui::Ui, _frame: &mut eframe::Frame, run_app: &mut RunApp) 
 }
 
 fn ui_card_buttons(ui: &mut egui::Ui, _frame: &mut eframe::Frame, cd: &mut Deck) {
+    cd.update_unanswered();
+    if ui.add(egui::Button::new("Reset ⟲")).clicked() {
+        cd.reset_deck();
+    }
     ui.add(egui::Label::new(
         RichText::new(format!("Correct: {}", cd.correct_count)).font(FontId::proportional(15.0)),
     ));
@@ -375,6 +487,7 @@ fn ui_edit_deck(ctx: &egui::Context, _frame: &mut eframe::Frame, run_app: &mut R
                                             .set_duration(Some(Duration::from_secs(4)));
                                     } else {
                                         run_app.show_rename_deck = false;
+                                        run_app.cd.name = run_app.new_deck_name.to_string();
                                     }
                                 }
                                 if ui.button("Cancel").clicked() {
