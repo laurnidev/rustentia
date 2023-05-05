@@ -49,6 +49,23 @@ impl Database {
         Ok(())
     }
 
+    pub fn remove_flashcard(&mut self, deck_name: &str, card_idx: i32) -> Result<()> {
+        let deck_id: String = self.connection.query_row(
+            "SELECT id FROM decks WHERE name = ?1",
+            &[deck_name],
+            |row| row.get(0).map(|id: i64| id.to_string()),
+        )?;
+        self.connection.execute(
+            "DELETE FROM flashcards WHERE card_idx = ?1 AND deck_id = ?2",
+            (card_idx, &deck_id),
+        )?;
+        self.connection.execute(
+            "UPDATE flashcards SET card_idx = card_idx - 1 WHERE card_idx > ?1 AND deck_id = ?2",
+            (card_idx, &deck_id),
+        )?;
+        Ok(())
+    }
+
     pub fn add_deck(&self, name: &str) -> Result<bool> {
         if !self.deck_is_unique(name)? {
             return Ok(false);
