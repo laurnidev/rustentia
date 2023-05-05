@@ -32,20 +32,20 @@ impl Default for RunApp {
         Self {
             cd: Deck::new(),
             show_add_cards: false,
-            add_card_front: "".to_string(),
-            add_card_back: "".to_string(),
+            add_card_front: String::new(),
+            add_card_back: String::new(),
             show_add_deck: false,
-            add_deck_name: "".to_string(),
+            add_deck_name: String::new(),
             toasts: Toasts::new().with_margin(egui::vec2(5.0, 70.0)),
             show_edit_deck: false,
-            new_deck_name: "".to_string(),
+            new_deck_name: String::new(),
             show_rename_deck: false,
-            renamed_deck: "".to_string(),
+            renamed_deck: String::new(),
             show_edit_cards: false,
             show_edit_card: false,
             edit_idx: 0,
-            new_front: "".to_string(),
-            new_back: "".to_string(),
+            new_front: String::new(),
+            new_back: String::new(),
         }
     }
 }
@@ -122,7 +122,7 @@ fn ui_middle(
         ui.with_layout(
             egui::Layout::top_down_justified(egui::Align::Center),
             |ui| {
-                ui.label(format!("{}", run_app.cd.name.to_string()));
+                ui.label(format!("{}", run_app.cd.name.to_owned()));
                 ui.add_space(200.0);
                 ui.columns(3, |columns| {
                     columns[2].with_layout(egui::Layout::right_to_left(egui::Align::RIGHT), |ui| {
@@ -140,7 +140,7 @@ fn ui_middle(
                                         let last_iter = deck_names.len();
                                         for (i, deck_name) in deck_names.iter().enumerate() {
                                             ui.horizontal(|ui| {
-                                                if deck_name.to_string() != run_app.cd.name {
+                                                if deck_name.to_owned() != run_app.cd.name {
                                                     if ui
                                                         .add(
                                                             egui::Button::new("◻")
@@ -149,9 +149,7 @@ fn ui_middle(
                                                         )
                                                         .clicked()
                                                     {
-                                                        run_app
-                                                            .cd
-                                                            .other_deck(deck_name.to_string());
+                                                        run_app.cd.other_deck(deck_name.to_owned());
                                                     }
                                                 } else {
                                                     if ui
@@ -164,15 +162,15 @@ fn ui_middle(
                                                     {
                                                     }
                                                 }
-                                                if deck_name.to_string() != run_app.cd.name {
+                                                if deck_name.to_owned() != run_app.cd.name {
                                                     ui.add_space(5.0);
                                                     ui.add(egui::Label::new(egui::RichText::new(
-                                                        deck_name.to_string(),
+                                                        deck_name.to_owned(),
                                                     )));
                                                 } else {
                                                     ui.add_space(5.0);
                                                     ui.add(egui::Label::new(
-                                                        egui::RichText::new(deck_name.to_string())
+                                                        egui::RichText::new(deck_name.to_owned())
                                                             .strong(),
                                                     ));
                                                 }
@@ -226,57 +224,85 @@ fn ui_edit_cards(ctx: &egui::Context, _frame: &mut eframe::Frame, run_app: &mut 
                             ));
                             ui.end_row();
                             ui.end_row();
-                            let mut i = 0;
                             let mut adding_outcome = false;
-                            for card in &run_app.cd.flashcards {
-                                i += 1;
+                            let mut deleted = false;
+                            for (i, card) in run_app.cd.flashcards.iter().enumerate() {
+                                let i: i32 = i as i32 + 1;
                                 ui.label(&card.front);
                                 ui.label(&card.back);
-                                if i != run_app.edit_idx {
-                                    if ui
-                                        .add(egui::Button::new("✏").small())
-                                        .on_hover_text("Edit")
-                                        .clicked()
-                                    {
-                                        run_app.show_edit_card = true;
-                                        run_app.edit_idx = i;
-                                        run_app.new_front = card.front.to_string();
-                                        run_app.new_back = card.back.to_string();
+                                match i == run_app.edit_idx {
+                                    true => {
+                                        if ui
+                                            .add(egui::Button::new("➡").small())
+                                            .on_hover_text("Cancel")
+                                            .clicked()
+                                        {
+                                            run_app.show_edit_card = false;
+                                            run_app.edit_idx = 0;
+                                        }
                                     }
-                                } else {
-                                    if ui
-                                        .add(egui::Button::new("❌").small())
-                                        .on_hover_text("Cancel")
-                                        .clicked()
-                                    {
-                                        run_app.show_edit_card = false;
-                                        run_app.edit_idx = 0;
+                                    false => {
+                                        if ui
+                                            .add(egui::Button::new("✏").small())
+                                            .on_hover_text("Edit")
+                                            .clicked()
+                                        {
+                                            run_app.show_edit_card = true;
+                                            run_app.edit_idx = i;
+                                            run_app.new_front = card.front.to_owned();
+                                            run_app.new_back = card.back.to_owned();
+                                        }
                                     }
                                 }
                                 ui.end_row();
                                 if run_app.show_edit_card && i == run_app.edit_idx {
                                     ui.text_edit_multiline(&mut run_app.new_front);
                                     ui.text_edit_multiline(&mut run_app.new_back);
-                                    if ui.small_button("Ok").clicked() {
-                                        if !run_app
-                                            .cd
-                                            .db
-                                            .edit_flashcard(
-                                                run_app.edit_idx,
-                                                &run_app.cd.name,
-                                                &run_app.new_front,
-                                                &run_app.new_back,
+                                    ui.vertical(|ui| {
+                                        ui.add_space(15.0);
+                                        if ui.small_button("Ok").clicked() {
+                                            if !run_app
+                                                .cd
+                                                .db
+                                                .edit_flashcard(
+                                                    run_app.edit_idx,
+                                                    &run_app.cd.name,
+                                                    &run_app.new_front,
+                                                    &run_app.new_back,
+                                                )
+                                                .unwrap()
+                                            {
+                                                run_app
+                                                    .toasts
+                                                    .info("Card already exists in deck!")
+                                                    .set_duration(Some(Duration::from_secs(4)));
+                                            } else {
+                                                adding_outcome = true;
+                                            }
+                                        }
+                                        ui.add_space(15.0);
+                                        if ui
+                                            .add(
+                                                egui::Button::new(
+                                                    RichText::new("❌")
+                                                        .color(egui::Color32::LIGHT_RED),
+                                                )
+                                                .small(),
                                             )
-                                            .unwrap()
+                                            .on_hover_text("Delete")
+                                            .clicked()
                                         {
                                             run_app
-                                                .toasts
-                                                .info("Card already exists in deck!")
-                                                .set_duration(Some(Duration::from_secs(4)));
-                                        } else {
-                                            adding_outcome = true;
+                                                .cd
+                                                .db
+                                                .remove_flashcard(
+                                                    &run_app.cd.name,
+                                                    run_app.edit_idx,
+                                                )
+                                                .unwrap();
+                                            deleted = true;
                                         }
-                                    }
+                                    });
                                     ui.end_row();
                                 }
                                 if i != run_app.cd.flashcards.len() as i32 {
@@ -284,6 +310,11 @@ fn ui_edit_cards(ctx: &egui::Context, _frame: &mut eframe::Frame, run_app: &mut 
                                     ui.add(egui::Separator::default().spacing(0.5));
                                     ui.end_row();
                                 }
+                            }
+                            if deleted {
+                                run_app.cd.update_flashcards();
+                                run_app.edit_idx = 0;
+                                run_app.show_edit_card = false;
                             }
                             if adding_outcome {
                                 run_app.cd.update_flashcards();
@@ -442,13 +473,13 @@ fn ui_edit_deck(ctx: &egui::Context, _frame: &mut eframe::Frame, run_app: &mut R
                                 )
                                 .clicked()
                             {
-                                deleted_deck = deck_name.to_string();
+                                deleted_deck = deck_name.to_owned();
                                 if i >= 1 {
-                                    new_active_deck = deck_names.get(i - 1).unwrap().to_string();
+                                    new_active_deck = deck_names.get(i - 1).unwrap().to_owned();
                                 } else {
                                     new_active_deck = match last_iter {
-                                        1 => "Default".to_string(),
-                                        _ => deck_names.get(i + 1).unwrap().to_string(),
+                                        1 => "Default".to_owned(),
+                                        _ => deck_names.get(i + 1).unwrap().to_owned(),
                                     };
                                 }
                             }
@@ -458,16 +489,16 @@ fn ui_edit_deck(ctx: &egui::Context, _frame: &mut eframe::Frame, run_app: &mut R
                                 .clicked()
                             {
                                 run_app.show_rename_deck = true;
-                                run_app.renamed_deck = deck_name.to_string();
-                                run_app.new_deck_name = deck_name.to_string();
+                                run_app.renamed_deck = deck_name.to_owned();
+                                run_app.new_deck_name = deck_name.to_owned();
                             }
                             ui.add_space(5.0);
                             ui.add(egui::Label::new(
-                                egui::RichText::new(deck_name.to_string()).strong(),
+                                egui::RichText::new(deck_name.to_owned()).strong(),
                             ));
                         });
                         ui.end_row();
-                        if run_app.show_rename_deck && deck_name.to_string() == run_app.renamed_deck
+                        if run_app.show_rename_deck && deck_name.to_owned() == run_app.renamed_deck
                         {
                             ui.horizontal(|ui| {
                                 ui.add(
@@ -487,7 +518,7 @@ fn ui_edit_deck(ctx: &egui::Context, _frame: &mut eframe::Frame, run_app: &mut R
                                             .set_duration(Some(Duration::from_secs(4)));
                                     } else {
                                         run_app.show_rename_deck = false;
-                                        run_app.cd.name = run_app.new_deck_name.to_string();
+                                        run_app.cd.name = run_app.new_deck_name.to_owned();
                                     }
                                 }
                                 if ui.button("Cancel").clicked() {
@@ -572,7 +603,7 @@ fn ui_add_deck(ctx: &egui::Context, _frame: &mut eframe::Frame, run_app: &mut Ru
                     run_app.add_deck_name.clear();
                 } else {
                     if run_app.add_deck_name != "" {
-                        run_app.cd.other_deck(run_app.add_deck_name.to_string());
+                        run_app.cd.other_deck(run_app.add_deck_name.to_owned());
                         run_app.add_deck_name.clear();
                     }
                 }
