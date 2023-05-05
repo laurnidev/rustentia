@@ -80,6 +80,28 @@ impl Database {
         Ok(true)
     }
 
+    pub fn edit_flashcard(
+        &mut self,
+        idx: i32,
+        deck: &str,
+        front: &str,
+        back: &str,
+    ) -> Result<bool> {
+        if !self.card_is_unique(&front, &back, &deck)? {
+            return Ok(false);
+        }
+        let deck_id: i64 =
+            self.connection
+                .query_row("SELECT id FROM decks WHERE name = ?1", &[deck], |row| {
+                    row.get(0)
+                })?;
+        self.connection.execute(
+            "UPDATE flashcards SET front = ?1, back = ?2 WHERE card_idx = ?3 AND deck_id = ?4",
+            &[front, back, &idx.to_string(), &deck_id.to_string()],
+        )?;
+        Ok(true)
+    }
+
     pub fn rename_deck(&self, deck_name: &str, new_deck_name: &str) -> Result<bool> {
         if !self.deck_is_unique(new_deck_name).unwrap() {
             return Ok(false);
