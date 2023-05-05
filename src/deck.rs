@@ -42,10 +42,11 @@ impl Deck {
             current_side: FlashCardSide::Front,
             idx: 0,
         };
+        let flashcards = database.get_flashcards(&name).unwrap();
         Self {
             name: name.to_string(),
-            flashcards: database.get_flashcards(&name).unwrap(),
-            unanswered_count: database.get_flashcards(&name).unwrap().len(),
+            unanswered_count: flashcards.len(),
+            flashcards,
             db: database,
             idx: 0,
             default_card,
@@ -89,13 +90,21 @@ impl Deck {
                 return;
             }
         }
+        self.reset_deck();
+    }
+
+    pub fn reset_deck(&mut self) {
         for card in &mut self.flashcards {
             card.correct = false;
         }
+        self.idx = 0;
         self.correct_count = 0;
         self.incorrect_count = 0;
-        self.unanswered_count = fc_len;
-        self.idx = 0;
+        self.unanswered_count = self.flashcards.len();
+    }
+
+    pub fn update_unanswered(&mut self) {
+        self.unanswered_count = self.flashcards.len();
     }
 
     pub fn update_flashcards(&mut self) {
