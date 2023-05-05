@@ -36,15 +36,15 @@ impl Deck {
                 .unwrap();
         }
         let default_card = FlashCard {
-            front: "".to_string(),
-            back: "".to_string(),
+            front: String::new(),
+            back: String::new(),
             correct: false,
             current_side: FlashCardSide::Front,
             idx: 0,
         };
         let flashcards = database.get_flashcards(&name).unwrap();
         Self {
-            name: name.to_string(),
+            name: name.to_owned(),
             unanswered_count: flashcards.len(),
             flashcards,
             db: database,
