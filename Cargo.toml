@@ -7,6 +7,7 @@ description = "Flashcards app using egui and rusqlite."
 homepage = "https://github.com/laurnidev/rustentia"
 repository = "https://github.com/laurnidev/rustentia"
 readme = "README.md"
+keywords = ["flashcards", "egui"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
