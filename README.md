@@ -1,9 +1,9 @@
 # Rustentia
 
-![rustentia](https://user-images.githubusercontent.com/106421928/236636879-22dc8c2b-0694-4c0e-8108-3e73c0c34243.png)
-
 This is a flashcards application written in Rust with [egui](https://github.com/emilk/egui)
 using [rusqlite](https://github.com/rusqlite/rusqlite) for making and managing the database.
+
+![rustentia](https://user-images.githubusercontent.com/106421928/236637043-91a771d0-8adf-4365-abbf-597eac2cf39e.png)
 
 ## Installation
 
