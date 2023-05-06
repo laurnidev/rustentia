@@ -19,6 +19,20 @@ or by cloning this repository:
 ```bash
 git clone https://github.com/laurnidev/rustentia
 ```
+If you installed with cargo the executable will be in .cargo/bin.
+.cargo/bin must either be in your PATH or you can run the program with
+
+```bash
+cd ~/.cargo/bin
+./rustentia
+```
+
+If you cloned the repository you run it with
+
+```bash
+cd ./rustentia
+cargo run
+```
 
 ## About
 
