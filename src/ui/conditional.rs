@@ -23,6 +23,7 @@ pub struct Conditional {
     pub edit_idx: i32,
     pub new_front: String,
     pub new_back: String,
+    pub exit_program: bool,
 }
 
 impl Conditional {
@@ -42,6 +43,7 @@ impl Conditional {
             edit_idx: 0,
             new_front: String::new(),
             new_back: String::new(),
+            exit_program: false,
         }
     }
     pub fn ui_edit_cards(
@@ -175,7 +177,11 @@ impl Conditional {
         ui.columns(2, |columns| {
             columns[0].with_layout(egui::Layout::left_to_right(egui::Align::LEFT), |ui| {
                 menu::bar(ui, |ui| {
-                    ui.menu_button("File", |ui| if ui.button("Open").clicked() {});
+                    ui.menu_button("File", |ui| {
+                        if ui.button("Exit").clicked() {
+                            self.exit_program = true;
+                        }
+                    });
                     ui.menu_button("Cards", |ui| {
                         if ui.button("Add cards").clicked() {
                             self.show_add_cards = true;
@@ -183,7 +189,6 @@ impl Conditional {
                         if ui.button("Edit cards").clicked() {
                             self.show_edit_cards = true;
                         }
-                        if ui.button("Import cards").clicked() {}
                     });
                     ui.menu_button("Decks", |ui| {
                         if ui.button("Add decks").clicked() {
@@ -192,10 +197,7 @@ impl Conditional {
                         if ui.button("Edit decks").clicked() {
                             self.show_edit_deck = true;
                         }
-                        if ui.button("Import decks").clicked() {}
                     });
-                    ui.menu_button("Settings", |ui| if ui.button("Open").clicked() {});
-                    ui.menu_button("Help", |ui| if ui.button("Open").clicked() {});
                 });
             });
             columns[1].with_layout(egui::Layout::right_to_left(egui::Align::RIGHT), |ui| {

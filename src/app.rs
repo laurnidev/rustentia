@@ -1,3 +1,5 @@
+use std::process::exit;
+
 use eframe::egui;
 
 use egui_notify::Toasts;
@@ -24,7 +26,6 @@ impl Default for RunApp {
 
 impl eframe::App for RunApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        // ctx.set_visuals(egui::style::Visuals::light());
         let deck = &mut self.dk;
         let toasts = &mut self.toasts;
         egui::TopBottomPanel::bottom("Buttons Panel")
@@ -45,5 +46,8 @@ impl eframe::App for RunApp {
         self.cd.ui_edit_deck(ctx, _frame, deck, toasts);
         self.cd.ui_edit_cards(ctx, _frame, deck, toasts);
         self.toasts.show(ctx);
+        if self.cd.exit_program {
+            exit(0);
+        }
     }
 }

@@ -12,7 +12,7 @@ fn main() -> Result<(), eframe::Error> {
         ..Default::default()
     };
     eframe::run_native(
-        "Floating window",
+        "Rustentia",
         options,
         Box::new(|_cc| Box::<RunApp>::default()),
     )
