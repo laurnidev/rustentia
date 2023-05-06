@@ -7,7 +7,6 @@ use eframe::{
 use crate::{custom_frame, Deck};
 
 pub fn ui_card_buttons(ui: &mut egui::Ui, _frame: &mut eframe::Frame, deck: &mut Deck) {
-    deck.update_unanswered();
     if ui.add(egui::Button::new("Reset ⟲")).clicked() {
         deck.reset_deck();
     }
@@ -77,7 +76,7 @@ pub fn ui_card_buttons(ui: &mut egui::Ui, _frame: &mut eframe::Frame, deck: &mut
                 {
                     deck.current_card().correct = true;
                     deck.correct_count += 1;
-                    if deck.incorrect_count != 0 {
+                    if deck.incorrect_count != 0 && deck.unanswered_count == 0 {
                         deck.incorrect_count -= 1;
                     }
                     if deck.unanswered_count != 0 {

@@ -74,7 +74,7 @@ impl Conditional {
                                 ));
                                 ui.end_row();
                                 ui.end_row();
-                                let mut adding_outcome = false;
+                                let mut editing_outcome = false;
                                 let mut deleted = false;
                                 for (i, card) in deck.flashcards.iter().enumerate() {
                                     let i: i32 = i as i32 + 1;
@@ -125,7 +125,7 @@ impl Conditional {
                                                         .info("Card already exists in deck!")
                                                         .set_duration(Some(Duration::from_secs(4)));
                                                 } else {
-                                                    adding_outcome = true;
+                                                    editing_outcome = true;
                                                 }
                                             }
                                             ui.add_space(15.0);
@@ -156,10 +156,11 @@ impl Conditional {
                                 }
                                 if deleted {
                                     deck.update_flashcards();
+                                    deck.update_unanswered();
                                     self.edit_idx = 0;
                                     self.show_edit_card = false;
                                 }
-                                if adding_outcome {
+                                if editing_outcome {
                                     deck.update_flashcards();
                                     self.edit_idx = 0;
                                     self.show_edit_card = false;
@@ -348,6 +349,7 @@ impl Conditional {
                                 .set_duration(Some(Duration::from_secs(4)));
                         } else if adding_outcome {
                             deck.update_flashcards();
+                            deck.update_unanswered();
                         }
                         self.add_card_front.clear();
                         self.add_card_back.clear();
