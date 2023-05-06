@@ -1,11 +1,6 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-mod app;
-use app::*;
-
-mod database;
-mod deck;
-mod flashcard;
+use rustentia::app::*;
 
 use eframe::egui;
 
