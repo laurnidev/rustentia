@@ -34,6 +34,15 @@ cd ./rustentia
 cargo run
 ```
 
+### NetBSD
+
+On NetBSD a pre-compiled binary is available from the official repositories.
+To install, simply run:
+
+```bash
+pkgin install rustentia
+```
+
 ## About
 
 This is a practise project I made while learning programming and Rust,
